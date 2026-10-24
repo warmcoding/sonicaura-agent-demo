@@ -3,7 +3,7 @@ import os
 import json
 import requests
 from dotenv import load_dotenv
-
+import logging 
 from openai import AsyncOpenAI
 from agents import Agent, Runner, set_tracing_disabled
 from agents.mcp import MCPServerStreamableHttp
@@ -11,6 +11,8 @@ from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
 load_dotenv()
 set_tracing_disabled(True)
+logging.getLogger("mcp").setLevel(logging.CRITICAL)
+logging.getLogger("openai.agents").setLevel(logging.CRITICAL)
 
 async def main():
     # 1. Initialize LLM Client (Currently using DeepSeek, change base_url for OpenAI)

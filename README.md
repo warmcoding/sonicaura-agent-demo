@@ -1,5 +1,7 @@
 # SonicAura MCP x OpenAI Agents SDK Demo 🤖🎵
 
+![SonicAura MCP Terminal Success Output](https://cdn.stacktechlab.dev/blog/37e84f81.png)
+
 This repository demonstrates how to build an AI Agent that can **denoise, extract vocals, and apply studio effects** to large audio files using the [SonicAura MCP Server](https://www.sonicaurastudio.com/mcp/agent-development) and the **OpenAI Agents SDK**.
 
 > **💡 Why this repo is special:** 
