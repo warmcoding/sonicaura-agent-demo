@@ -20,7 +20,7 @@ This repository demonstrates how to build an AI Agent that can **denoise, extrac
 ### 1. Prerequisites
 - **Python 3.10+**
 - An **LLM API Key** (OpenAI, or a compatible provider like DeepSeek)
-- A **SonicAura API Key** (Get 3 free executions per month at [SonicAura Studio](https://www.sonicaurastudio.com/auth/login))
+- A **SonicAura API Key** (Get 2 free executions per month at [SonicAura Studio](https://www.sonicaurastudio.com/auth/login))
 
 ### 2. Installation
 
