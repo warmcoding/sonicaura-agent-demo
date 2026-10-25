@@ -1,33 +1,18 @@
 import asyncio
 import os
-import json
-import requests
 import logging 
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
-from agents import Agent, Runner, set_tracing_disabled
+from agents import set_tracing_disabled
 from agents.mcp import MCPServerStreamableHttp
-from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
 load_dotenv()
 set_tracing_disabled(True)
 
-# Keep this to see raw HTTP requests if errors occur, but suppress harmless SDK warnings
+# Keep logs clean but show important MCP connection status
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("mcp").setLevel(logging.WARNING)
-logging.getLogger("openai.agents").setLevel(logging.ERROR) 
 
 async def main():
-    # 1. Initialize LLM Client
-    deepseek_client = AsyncOpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url="https://api.deepseek.com/v1"
-    )
-    deepseek_model = OpenAIChatCompletionsModel(
-        model="deepseek-chat",
-        openai_client=deepseek_client
-    )
-
     sonicaura_key = os.getenv("SONICAURA_API_KEY")
     if not sonicaura_key:
         print("❌ Error: SONICAURA_API_KEY not found in .env file. Please check your configuration.")
@@ -44,91 +29,26 @@ async def main():
             }
         ) as sonicaura_server:
 
-            # === 1. Fetch and print the actual tools list from the server ===
+            # === ONLY FETCH AND PRINT TOOLS ===
             try:
                 tools = await sonicaura_server.list_tools()
                 print(f"\n✅ Connected! Available tools ({len(tools)}):")
                 for t in tools:
-                    print(f"  - {t.name}")
+                    print(f"  - {t.name}: {t.description}")
                 print("-" * 60)
+                print("\n💡 Notice: Audio processing (GPU execution) is currently locked for public demos.")
+                print("👉 To enable full processing, please apply for an API quota or modify the script to include the Runner logic.")
+                
             except Exception as e:
                 print(f"❌ Failed to fetch tools! The server might be down or the API Key is invalid. Error: {e}")
                 return
 
-            # === 2. Initialize the Agent ===
-            podcast_agent = Agent(
-                name="Audio Preprocessor",
-                model=deepseek_model,
-                instructions=(
-                    "You are an expert audio assistant. "
-                    "When you use a processing tool, it returns a `task_id`. "
-                    "You MUST immediately call `check_task_status` with that `task_id` to poll for completion. "
-                    "If the status is 'processing', call `check_task_status` again. "
-                    "Once the status is 'done', look inside the `tracks` dictionary in the response to find the download URLs, and return them to the user."
-                ),
-                mcp_servers=[sonicaura_server]
-            )
-
-            test_audio_path = os.path.abspath("./samples/noisy_audio.mp3") 
-            if not os.path.exists(test_audio_path):
-                print(f"⚠️ Test file not found: {test_audio_path}")
-                return
-
-            # === 3. Request a presigned upload URL ===
-            print("\n[Step 1] Requesting upload URL from SonicAura...")
-            try:
-                url_result = await sonicaura_server.call_tool(
-                    "get_upload_url", 
-                    arguments={"filename": "noisy_audio.mp3"}
-                )
-                raw_text = url_result.content[0].text
-                parsed_result = json.loads(raw_text)
-                upload_url = parsed_result.get("upload_url")
-                file_key = parsed_result.get("source_key")
-                
-                if not upload_url or not file_key:
-                    print(f"❌ Failed to parse response: {raw_text}")
-                    return
-                    
-                print(f"✅ Got upload URL! Source Key: {file_key}")
-            except Exception as e:
-                print(f"❌ Failed to get upload URL! Error: {e}")
-                return
-
-            # === 4. Python handles direct upload ===
-            print("[Step 2] Direct uploading file to cloud storage...")
-            headers = {"Content-Type": "audio/mpeg"} 
-            with open(test_audio_path, 'rb') as f:
-                res = requests.put(upload_url, data=f, headers=headers)
-                
-            if res.status_code in [200, 201, 204]:
-                print("✅ Upload successful!")
-            else:
-                print(f"❌ Upload failed, status code: {res.status_code}")
-                return
-
-            # === 5. Hand over to Agent for async polling ===
-            print("\n[Step 3] 🤖 Starting Agent workflow...")
+            # =====================================================================
+            # 🚨 NOTICE: Processing logic (Upload + Agent Execution) is disabled.
+            # To re-enable it in the future, refer to the previous version of main.py.
+            # =====================================================================
             
-            prompt = f"""
-            The audio file has been successfully uploaded. 
-            The source_key is: '{file_key}'
-            
-            Please extract the vocals (2 stems) from this audio file.
-            Poll the status until it is done.
-            
-            IMPORTANT: Return the download URLs for BOTH the isolated vocals and the instrumental (no_vocals) found in the `tracks` dictionary.
-            """
-            
-            try:
-                # Increased max_turns to 30 to accommodate the server's internal sleep(3) during polling
-                result = await Runner.run(podcast_agent, prompt, max_turns=30)
-                print("\n" + "="*50)
-                print("✅ Processing Complete! Agent Final Output:")
-                print(result.final_output)
-                print("="*50)
-            except Exception as e:
-                print(f"❌ Agent execution failed: {e}")
+            # (省略了 Agent 初始化、文件上传、Runner.run 等消耗成本的逻辑)
 
     except Exception as e:
         print(f"❌ Critical connection failure to SonicAura MCP Server: {e}")
