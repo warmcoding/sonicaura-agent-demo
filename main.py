@@ -48,7 +48,7 @@ async def main():
             # To re-enable it in the future, refer to the previous version of main.py.
             # =====================================================================
             
-            # (省略了 Agent 初始化、文件上传、Runner.run 等消耗成本的逻辑)
+         
 
     except Exception as e:
         print(f"❌ Critical connection failure to SonicAura MCP Server: {e}")
